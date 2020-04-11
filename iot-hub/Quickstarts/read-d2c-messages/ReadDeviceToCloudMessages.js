@@ -31,6 +31,13 @@ const Buffer = require("buffer").Buffer;
 const { Connection, ReceiverEvents, isAmqpError, parseConnectionString } = require("rhea-promise");
 const { EventHubConsumerClient } = require("@azure/event-hubs");
 
+// If using websockets, uncomment the below require statement
+// const WebSocket = require("ws");
+
+// If you need proxy support, uncomment the below code to create proxy agent
+// const HttpsProxyAgent = require("https-proxy-agent");
+// const proxyAgent = new HttpsProxyAgent(proxyInfo);
+
 // This code is modified from https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-devguide-security#security-tokens.
 function generateSasToken(resourceUri, signingKey, policyName, expiresInMins) {
   resourceUri = encodeURIComponent(resourceUri);
@@ -78,6 +85,10 @@ async function convertIotHubToEventHubsConnectionString(connectionString) {
     SharedAccessKeyName,
     5 // token expires in 5 minutes
   );
+
+  // If using websockets, uncomment the webSocketOptions below
+  // If using proxy, then set `webSocketOptions.options` to 
+  // { agent: proxyAgent }
   const connectionOptions = {
     transport: "tls",
     host: HostName,
@@ -86,6 +97,12 @@ async function convertIotHubToEventHubsConnectionString(connectionString) {
     port: 5671,
     reconnect: false,
     password: token,
+    // webSocketOptions: {
+    //   webSocket: WebSocket,
+    //   url: `wss://${HostName}:443/$servicebus/websocket`,
+    //   protocol: ["AMQPWSB10"],
+    //   options: {}
+    // }
   };
 
   const connection = new Connection(connectionOptions);
@@ -172,7 +189,21 @@ async function main() {
     iotHubConnectionString
   );
 
-  const consumerClient = new EventHubConsumerClient("$Default", eventHubsConnectionString);
+  // If using websockets, uncomment the webSocketOptions below
+  // If using proxy, then set `webSocketConstructorOptions` to
+  // { agent: proxyAgent }
+  const clientOptions = {
+    // webSocketOptions: {
+    //   webSocket: WebSocket,
+    //   webSocketConstructorOptions: {}
+    // }
+  };
+
+  const consumerClient = new EventHubConsumerClient(
+    "$Default",
+    eventHubsConnectionString,
+    clientOptions
+  );
   consumerClient.subscribe({
     processEvents: printMessages,
     processError: printError,
